@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Goals - Pomodoro+</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="container">
+  <aside class="sidebar">
+    <h2 class="logo">Pomodoro+</h2>
+    <nav>
+      <ul>
+        <li onclick="location.href='index.html'"><i class="fas fa-home"></i> Dashboard</li>
+        <li onclick="location.href='tasks.html'"><i class="fas fa-tasks"></i> Tasks</li>
+        <li onclick="location.href='custom.html'"><i class="fas fa-cog"></i> Custom</li>
+        <li onclick="location.href='history.html'"><i class="fas fa-history"></i> History</li>
+        <li onclick="location.href='motivational.html'"><i class="fas fa-heart"></i> Motivation</li>
+        <li class="active" onclick="location.href='goals.html'"><i class="fas fa-bullseye"></i> Goals</li>
+        <li onclick="location.href='login.html'"><i class="fas fa-lock"></i> Login</li>
+        <li onclick="location.href='about.html'"><i class="fas fa-info-circle"></i> About</li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <header>
+      <h1>Goals</h1>
+    </header>
+
+    <section class="goals-section">
+      <form id="goalForm">
+        <input type="text" id="goalInput" placeholder="Enter your goal" required />
+        <button type="submit">Add</button>
+      </form>
+
+      <h3>Active Goals</h3>
+      <ul id="goalList" class="goal-list"></ul>
+
+      <h3>Achieved Goals</h3>
+      <ul id="achievedList" class="goal-list"></ul>
+    </section>
+  </main>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const goalForm = document.getElementById("goalForm");
+  const goalInput = document.getElementById("goalInput");
+  const goalList = document.getElementById("goalList");
+  const achievedList = document.getElementById("achievedList");
+
+  fetchGoals();
+
+  goalForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const goalText = goalInput.value.trim();
+    if (!goalText) return;
+
+    fetch("add_goal.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal: goalText })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "success") {
+        fetchGoals();
+        goalInput.value = "";
+      } else {
+        alert("Failed to add goal: " + data.message);
+      }
+    })
+    .catch(err => alert("Error adding goal: " + err.message));
+  });
+
+  function fetchGoals() {
+    fetch("getgoals.php")
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          renderGoals(data.goals);
+        } else {
+          alert("Failed to load goals: " + (data.message || "Unknown error"));
+        }
+      })
+      .catch(err => {
+        alert("Error fetching goals: " + err.message);
+      });
+  }
+
+  function renderGoals(goals) {
+    goalList.innerHTML = "";
+    achievedList.innerHTML = "";
+
+    goals.forEach(goal => {
+      const li = document.createElement("li");
+      li.className = "goal-item";
+      li.innerHTML = `
+        <input type="checkbox" data-id="${goal.Id}" ${goal.Status === "Achieved" ? "checked" : ""} />
+        <span>${goal.Goal_Text}</span>
+        <button class="delete-btn" data-id="${goal.Id}">❌</button>
+      `;
+
+      if (goal.Status === "Achieved") {
+        achievedList.appendChild(li);
+      } else {
+        goalList.appendChild(li);
+      }
+    });
+  }
+
+  document.addEventListener("change", function (e) {
+    if (e.target.type === "checkbox") {
+      const id = e.target.dataset.id;
+      const status = e.target.checked ? "Achieved" : "Active";
+
+      fetch("update_goal.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          fetchGoals(); 
+        } else {
+          alert("Failed to update goal: " + (data.message || "Unknown error"));
+        }
+      })
+      .catch(err => alert("Error updating goal: " + err.message));
+    }
+  });
+
+  
+  document.addEventListener("click", function (e) {
+    if (e.target.classList.contains("delete-btn")) {
+      const id = e.target.dataset.id;
+      fetch("delete_goal.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          fetchGoals();
+        } else {
+          alert("Failed to delete goal: " + (data.message || "Unknown error"));
+        }
+      })
+      .catch(err => alert("Error deleting goal: " + err.message));
+    }
+  });
+});
+</script>
+
+</body>
+</html>

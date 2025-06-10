@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Custom Pomodoro Timer</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="custom-timer.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <div class="logo">Pomodoro+</div>
+      <nav>
+        <ul>
+          <li onclick="location.href='index.html'"><i class="fas fa-home"></i> Dashboard</li>
+          <li onclick="location.href='tasks.html'"><i class="fas fa-tasks"></i> Tasks</li>
+          <li class="active" onclick="location.href='custom.html'"><i class="fas fa-custom"></i> Custom</li>
+          <li onclick="location.href='history.html'"><i class="fas fa-history"></i> History</li>
+          <li onclick="location.href='motivational.html'"><i class="fas fa-motivation"></i> Motivation</li>
+          <li onclick="location.href='goals.html'"><i class="fas fa-bullseye"></i> Goals</li>
+          <li onclick="location.href='login.html'"><i class="fas fa-lock"></i> Login</li>
+          <li onclick="location.href='about.html'"><i class="fas fa-info-circle"></i> About</li>
+        </ul>
+      </nav>
+    </div>
+
+    <main class="main-content">
+      <div class="custom-timer-box">
+        <h2><i class="fas fa-stopwatch"></i> Custom Pomodoro Timer</h2>
+        <form id="customTimerForm" onsubmit="event.preventDefault(); startCustomPomodoro();">
+          <div class="input-row">
+            <input type="number" id="work-minutes" min="1" placeholder="Work (min)" required />
+            <input type="number" id="break-minutes" min="1" placeholder="Break (min)" required />
+          </div>
+
+          <div class="fish-container">
+            <img src="fish.png" alt="Cute Fish" class="cute-fish" />
+          </div>
+
+          <div class="input-row">
+            <select id="taskSelect" required>
+              <option value="">-- Select Task --</option>
+            </select>
+          </div>
+
+          <div class="button-row">
+            <button type="submit" class="start-btn">Start</button>
+            <button type="button" id="pauseBtn" disabled>Pause</button>
+            <button type="button" id="resumeBtn" disabled>Resume</button>
+          </div>
+        </form>
+
+        <div id="session-label" class="session-label">Session: None</div>
+        <div id="custom-session-display" class="time-display">00:00</div>
+      </div>
+    </main>
+  </div>
+
+<script>
+let customInterval, customTimeLeft = 0, isPaused = false;
+let isSessionRunning = false;
+let isSessionSaved = false;
+
+window.addEventListener("DOMContentLoaded", () => {
+  loadTasksFromServer();
+  document.getElementById("pauseBtn").addEventListener("click", pauseCustomTimer);
+  document.getElementById("resumeBtn").addEventListener("click", resumeCustomTimer);
+});
+
+function loadTasksFromServer() {
+  fetch("load_tasks.php")
+    .then(res => res.json())
+    .then(data => {
+      const sel = document.getElementById("taskSelect");
+      sel.innerHTML = '<option value="">-- Select Task --</option>';
+      if (data.success) {
+        data.tasks.forEach(task => {
+          const o = document.createElement("option");
+          o.value = task.Task_ID;
+          o.textContent = task.Title;
+          sel.appendChild(o);
+        });
+      }
+    })
+    .catch(err => console.error("Error loading tasks:", err));
+}
+
+function startCustomPomodoro() {
+  if (isSessionRunning) return; // Prevent double starts
+
+  const w = parseInt(document.getElementById("work-minutes").value);
+  const b = parseInt(document.getElementById("break-minutes").value);
+  const sel = document.getElementById("taskSelect");
+  const taskID = sel.value;
+  const taskTitle = sel.selectedOptions[0]?.text || "Task";
+
+  if (!w || !b || !taskID) {
+    alert("Please fill all fields.");
+    return;
+  }
+
+  isSessionRunning = true;
+  isSessionSaved = false;
+
+  document.getElementById("session-label").textContent = `Session: ${taskTitle} (Work)`;
+  customTimeLeft = w * 60;
+  isPaused = false;
+
+  document.getElementById("pauseBtn").disabled = false;
+  document.getElementById("resumeBtn").disabled = true;
+
+  startCountdown(() => {
+    document.getElementById("session-label").textContent = `Session: ${taskTitle} (Break)`;
+    customTimeLeft = b * 60;
+
+    startCountdown(() => {
+      document.getElementById("session-label").textContent = `Session: ${taskTitle} Completed 🎉`;
+      if (!isSessionSaved) {
+        saveCustomSession(taskID, w, b);
+        isSessionSaved = true;
+      }
+      isSessionRunning = false;
+      document.getElementById("pauseBtn").disabled = true;
+      document.getElementById("resumeBtn").disabled = true;
+    });
+  });
+}
+
+function startCountdown(onComplete) {
+  clearInterval(customInterval);
+  updateCustomDisplay();
+
+  customInterval = setInterval(() => {
+    if (!isPaused) {
+      customTimeLeft--;
+      updateCustomDisplay();
+      if (customTimeLeft <= 0) {
+        clearInterval(customInterval);
+        onComplete();
+      }
+    }
+  }, 1000);
+}
+
+function updateCustomDisplay() {
+  const m = String(Math.floor(customTimeLeft / 60)).padStart(2, "0");
+  const s = String(customTimeLeft % 60).padStart(2, "0");
+  document.getElementById("custom-session-display").textContent = `${m}:${s}`;
+}
+
+function pauseCustomTimer() {
+  isPaused = true;
+  document.getElementById("pauseBtn").disabled = true;
+  document.getElementById("resumeBtn").disabled = false;
+}
+
+function resumeCustomTimer() {
+  isPaused = false;
+  document.getElementById("pauseBtn").disabled = false;
+  document.getElementById("resumeBtn").disabled = true;
+}
+
+function saveCustomSession(taskID, workMinutes, breakMinutes) {
+  const duration = workMinutes * 60;
+  const fd = new URLSearchParams();
+  fd.append("task_id", taskID);
+  fd.append("session_type", "work");
+  fd.append("duration", duration);
+  fd.append("custom_work", workMinutes);
+  fd.append("custom_break", breakMinutes);
+
+  fetch("save_custom_session.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: fd
+  })
+    .then(r => r.text())
+    .then(d => console.log("✅ Saved:", d))
+    .catch(e => console.error("❌ Error:", e));
+}
+</script>
+
+</body>
+</html>

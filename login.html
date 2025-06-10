@@ -1,0 +1,220 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Premium Login - Pomodoro+</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<style>
+  
+  body {
+    font-family: Arial, sans-serif;
+    background: #f0f0f0;
+    color: #333;
+  }
+  .container {
+    display: flex;
+    min-height: 100vh;
+  }
+  .sidebar {
+    width: 220px;
+    background: #5dadb6;
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar .logo {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 40px;
+  }
+  .sidebar nav ul {
+    list-style: none;
+    padding: 0;
+  }
+  .sidebar nav ul li {
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+  }
+  .sidebar nav ul li i {
+    margin-right: 10px;
+  }
+  .sidebar nav ul li:hover,
+  .sidebar nav ul li.active {
+    background-color: #86dbe4;
+  }
+  .main-content {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .login-container {
+    max-width: 400px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 30px;
+    text-align: center;
+  }
+  .brand-logo {
+    font-size: 28px;
+    font-weight: bold;
+    color: #5dadb6;
+    margin-bottom: 10px;
+  }
+  .login-container h1 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #5dadb6;
+  }
+  .login-container p {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 20px;
+  }
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 10px 14px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  input:focus {
+    outline: none;
+    border-color: #5dadb6;
+    box-shadow: 0 0 5px rgba(93, 173, 182, 0.3);
+  }
+  .button-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  .button-row button {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .signup-btn {
+    background: #ccc;
+    color: #333;
+  }
+  .signup-btn:hover {
+    background: #bbb;
+  }
+  .login-btn {
+    background: #5dadb6;
+    color: #fff;
+  }
+  .login-btn:hover {
+    background: #4ba3a9;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <aside class="sidebar">
+    <h2 class="logo">Pomodoro+</h2>
+    <nav>
+      <ul>
+        <li onclick="location.href='index.html'"><i class="fas fa-home"></i> Dashboard</li>
+        <li onclick="location.href='tasks.html'"><i class="fas fa-tasks"></i> Tasks</li>
+        <li onclick="location.href='custom.html'"><i class="fas fa-stopwatch"></i> Custom</li>
+        <li onclick="location.href='history.html'"><i class="fas fa-history"></i> History</li>
+        <li onclick="location.href='motivational.html'"><i class="fas fa-heart"></i> Motivation</li>
+        <li onclick="location.href='goals.html'"><i class="fas fa-bullseye"></i> Goals</li>
+        <li class="active" onclick="location.href='login.html'"><i class="fas fa-lock"></i> Login</li>
+        <li onclick="location.href='about.html'"><i class="fas fa-info-circle"></i> About</li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <div class="login-container">
+      <div class="brand-logo">Pomodoro+</div>
+      <p>Welcome! Get started by logging into your account. If you do not have an account, sign up.</p>
+
+      <form id="loginForm">
+        <input type="text" id="username" placeholder="Username" required />
+        <input type="password" id="password" placeholder="Password" required />
+        <div class="button-row">
+          <button type="button" class="signup-btn" onclick="signup()">Sign Up</button>
+          <button type="submit" class="login-btn">Login</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const loginForm = document.getElementById("loginForm");
+
+    loginForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+
+      try {
+        const response = await fetch("login.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ username, password }),
+        });
+
+        const result = await response.json();
+        alert(result.message);
+        if (result.success) {
+          window.location.href = "index.html";
+        }
+      } catch (e) {
+        console.error("Login error:", e);
+        alert("Login failed: Invalid server response.");
+      }
+    });
+  });
+
+  async function signup() {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+
+    if (!username || !password) {
+      alert("Please enter both username and password to sign up.");
+      return;
+    }
+
+    try {
+      const response = await fetch("signup.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, password }),
+      });
+
+      const result = await response.json();
+      alert(result.message);
+    } catch (e) {
+      console.error("Signup error:", e);
+      alert("Signup failed: Invalid server response.");
+    }
+  }
+</script>
+
+
+</body>
+</html>  

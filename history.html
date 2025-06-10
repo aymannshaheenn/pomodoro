@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>History - Pomodoro</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2 class="logo">Pomodoro+</h2>
+      <nav>
+        <ul>
+          <li onclick="location.href='index.html'"><i class="fas fa-home"></i> Dashboard</li>
+          <li onclick="location.href='tasks.html'"><i class="fas fa-tasks"></i> Tasks</li>
+          <li onclick="location.href='custom.html'"><i class="fas fa-custom"></i> Custom</li>
+          <li class="active" onclick="location.href='history.html'"><i class="fas fa-history"></i> History</li>
+          <li onclick="location.href='motivational.html'"><i class="fas fa-motivation"></i> Motivation</li>
+          <li onclick="location.href='goals.html'"><i class="fas fa-bullseye"></i> Goals</li>
+          <li onclick="location.href='login.html'"><i class="fas fa-lock"></i> Login</li>
+          <li onclick="location.href='about.html'"><i class="fas fa-info-circle"></i> About</li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header>
+        <h1>Session History</h1>
+      </header>
+      <section class="history-section">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Session Type</th>
+              <th>Duration</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+          
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      fetch("get_history.php")
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === "success") {
+            const historyTableBody = document.getElementById("historyTableBody");
+            historyTableBody.innerHTML = "";
+            data.history.forEach(entry => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                <td>${entry.title}</td>
+                <td>${entry.type}</td>
+                <td>${entry.duration} min</td>
+                <td>${entry.date}</td>
+              `;
+              historyTableBody.appendChild(tr);
+            });
+          } else {
+            alert("Failed to load history: " + data.message);
+          }
+        })
+        .catch(error => console.error("Error loading history:", error));
+    });
+  </script>
+</body>
+</html>

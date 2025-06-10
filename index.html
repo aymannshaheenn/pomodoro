@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pomodoro Timer - Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <style>
+    
+    .completed { text-decoration: line-through; color: gray; }
+    .active-task { background: #d0eaff; }
+    .task-selector {
+      margin: 20px 0;
+      font-size: 16px;
+    }
+    .task-selector select {
+      padding: 6px 12px;
+      font-size: 16px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2 class="logo">Pomodoro+</h2>
+      <nav>
+        <ul>
+          <li class="active" onclick="location.href='index.html'"><i class="fas fa-home"></i> Dashboard</li>
+          <li onclick="location.href='tasks.html'"><i class="fas fa-tasks"></i> Tasks</li>
+          <li onclick="location.href='custom.html'"><i class="fas fa-clock"></i> Custom</li>
+          <li onclick="location.href='history.html'"><i class="fas fa-history"></i> History</li>
+          <li onclick="location.href='motivational.html'"><i class="fas fa-heart"></i> Motivation</li>
+          <li onclick="location.href='goals.html'"><i class="fas fa-bullseye"></i> Goals</li>
+          <li onclick="location.href='login.html'"><i class="fas fa-lock"></i> Login</li>
+          <li onclick="location.href='about.html'"><i class="fas fa-info-circle"></i> About</li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header>
+        <h1>Pomodoro Timer</h1>
+        <div class="dark-mode-toggle">
+          <label class="switch">
+            <input type="checkbox" id="darkModeToggle" />
+            <span class="slider round"></span>
+          </label>
+          <span>Dark Mode</span>
+        </div>
+      </header>
+
+      <section class="timer-section">
+        <div class="buttons-vertical-group" id="sessionTypeButtons">
+          <button class="session-btn active" data-session="work">Work (25 min)</button>
+          <button class="session-btn" data-session="short_break">Short Break (5 min)</button>
+          <button class="session-btn" data-session="long_break">Long Break (15 min)</button>
+        </div>
+
+        <div class="task-selector">
+          <label for="taskSelect">Select Task:</label>
+          <select id="taskSelect">
+            <option value="">-- Select Task --</option>
+          </select>
+        </div>
+
+        <div class="timer-main">
+          <div id="timer">25:00</div>
+          <div class="controls">
+            <button id="startBtn">Start</button>
+            <button id="stopBtn" disabled>Stop</button>
+          </div>
+          <div id="message" class="message-section"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  const sessionButtons = document.querySelectorAll('.session-btn');
+  const darkModeToggle = document.getElementById("darkModeToggle");
+  const taskSelect = document.getElementById("taskSelect");
+  const messageDiv = document.getElementById("message");
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const timerDisplay = document.getElementById("timer");
+
+  let timerInterval;
+  let timeLeft = 0;
+  let isRunning = false;
+  let totalSessionDuration = 0;
+
+  let workMins = 25, shortBreakMins = 5, longBreakMins = 15;
+
+  sessionButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      sessionButtons.forEach(b => b.classList.remove('active'));
+      button.classList.add('active');
+      document.body.classList.remove('break', 'long-break');
+
+      const s = button.dataset.session;
+      if (s === 'short_break') document.body.classList.add('break');
+      else if (s === 'long_break') document.body.classList.add('long-break');
+
+      setTimerBySession(s);
+    });
+  });
+
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener("change", () => {
+      const isDark = darkModeToggle.checked;
+      document.body.classList.toggle("dark", isDark);
+
+      fetch("update_dark_mode.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ dark_mode: isDark ? 1 : 0 })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) console.warn("Dark mode not saved:", data.message);
+      })
+      .catch(err => console.error("Error saving dark mode:", err));
+    });
+  }
+
+  function setTimerBySession(sessionType) {
+    switch (sessionType) {
+      case "short_break":
+        timeLeft = shortBreakMins * 60;
+        break;
+      case "long_break":
+        timeLeft = longBreakMins * 60;
+        break;
+      default:
+        timeLeft = workMins * 60;
+    }
+    totalSessionDuration = timeLeft;
+    updateDisplay();
+  }
+
+  function updateDisplay() {
+    const min = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const sec = (timeLeft % 60).toString().padStart(2, '0');
+    timerDisplay.textContent = `${min}:${sec}`;
+  }
+
+  startBtn.addEventListener("click", () => {
+    if (isRunning) return;
+
+    const selTask = taskSelect.value;
+    const sessionType = document.querySelector(".session-btn.active")?.dataset.session || "work";
+
+    if (!selTask) {
+      messageDiv.innerText = "Please select a task.";
+      return;
+    }
+
+    messageDiv.innerText = `Focused on: ${taskSelect.selectedOptions[0]?.textContent}`;
+    isRunning = true;
+    stopBtn.disabled = false;
+
+    if (timeLeft === 0) setTimerBySession(sessionType);
+
+    timerInterval = setInterval(() => {
+      if (timeLeft > 0) {
+        timeLeft--;
+        updateDisplay();
+      } else {
+        clearInterval(timerInterval);
+        isRunning = false;
+        stopBtn.disabled = true;
+        saveSessionToDB(sessionType, totalSessionDuration, selTask);
+        messageDiv.innerText = "Session completed!";
+      }
+    }, 1000);
+  });
+
+  stopBtn.addEventListener("click", () => {
+    if (!isRunning) return;
+    clearInterval(timerInterval);
+    isRunning = false;
+    stopBtn.disabled = true;
+
+    const selTask = taskSelect.value;
+    const sessionType = document.querySelector(".session-btn.active")?.dataset.session || "work";
+
+    saveSessionToDB(sessionType, totalSessionDuration - timeLeft, selTask);
+    messageDiv.innerText = "Session stopped early.";
+  });
+
+  function saveSessionToDB(sessionType, duration, taskId, customWork = null, customBreak = null) {
+    fetch("save_session.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        task_id: taskId,
+        session_type: sessionType,
+        duration: duration,
+        custom_work: customWork,
+        custom_break: customBreak
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) {
+        console.warn("Failed to save session:", data.message);
+      }
+    })
+    .catch(err => console.error("Error saving session:", err));
+  }
+
+  function loadTasksToDropdown() {
+    fetch("load_tasks.php")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          taskSelect.innerHTML = '<option value="">-- Select Task --</option>';
+          data.tasks.forEach(task => {
+            const option = document.createElement("option");
+            option.value = task.Task_ID;
+            option.textContent = task.Title;
+            taskSelect.appendChild(option);
+          });
+        } else {
+          console.warn("Failed to load tasks:", data.message);
+        }
+      })
+      .catch(err => console.error("Error loading tasks:", err));
+  }
+
+  async function loadSettings() {
+    try {
+      const response = await fetch("load_settings.php");
+      const data = await response.json();
+
+      if (data.success) {
+        const s = data.settings;
+        workMins = parseInt(s.Work_time) || 25;
+        shortBreakMins = parseInt(s.Short_break) || 5;
+        longBreakMins = parseInt(s.Long_break) || 15;
+
+        sessionButtons[0].textContent = `Work (${workMins} min)`;
+        sessionButtons[1].textContent = `Short Break (${shortBreakMins} min)`;
+        sessionButtons[2].textContent = `Long Break (${longBreakMins} min)`;
+
+        if (parseInt(s.Dark_mode) === 1) {
+          document.body.classList.add("dark");
+          if (darkModeToggle) darkModeToggle.checked = true;
+        }
+
+        timeLeft = workMins * 60;
+        totalSessionDuration = timeLeft;
+        updateDisplay();
+      } else {
+        console.warn("Settings not found.");
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+    }
+  }
+
+  loadTasksToDropdown();
+  loadSettings();
+  stopBtn.disabled = true;
+});
+</script>
+</body>
+</html>

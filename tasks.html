@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tasks - Pomodoro+</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="container">
+
+  <aside class="sidebar">
+    <h2 class="logo">Pomodoro+</h2>
+    <nav>
+      <ul>
+        <li onclick="location.href='index.html'"><i class="fas fa-home"></i> Dashboard</li>
+        <li class="active" onclick="location.href='tasks.html'"><i class="fas fa-tasks"></i> Tasks</li>
+        <li onclick="location.href='custom.html'"><i class="fas fa-custom"></i> Custom</li>
+        <li onclick="location.href='history.html'"><i class="fas fa-history"></i> History</li>
+        <li onclick="location.href='motivational.html'"><i class="fas fa-heart"></i> Motivation</li>
+        <li onclick="location.href='goals.html'"><i class="fas fa-bullseye"></i> Goals</li>
+        <li onclick="location.href='login.html'"><i class="fas fa-lock"></i> Login</li>
+        <li onclick="location.href='about.html'"><i class="fas fa-info-circle"></i> About</li>
+      </ul>
+    </nav>
+  </aside>
+
+  
+  <main class="main-content">
+    <header>
+      <h1>Task Manager</h1>
+    </header>
+
+   
+    <section class="task-section sleek-tasks">
+      <h2><i class="fas fa-tasks"></i> Manage Your Tasks</h2>
+      <form id="taskForm" class="task-form sleek-form">
+        <input type="text" id="taskTitle" placeholder="Enter new task" required autocomplete="off" />
+        <input type="number" id="sessionEstimate" placeholder="Sessions" min="1" required />
+        <input type="number" id="customWorkTime" placeholder="Work time (min)" min="1" required />
+        <select id="taskPriority" required>
+          <option value="">Priority</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+        <button type="submit">Add</button>
+      </form>
+      <ul id="taskList" class="task-list sleek-list"></ul>
+    </section>
+  </main>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("taskForm");
+  const taskList = document.getElementById("taskList");
+
+ 
+  fetch("tasks.php")
+    .then((res) => res.json())
+    .then((data) => {
+      if (Array.isArray(data)) {
+        data.forEach(task => {
+          const li = document.createElement("li");
+          li.textContent = `${task.Title} (${task.Estimated_sessions} sessions, ${task.Estimated_time} min, ${task.Priority})`;
+          taskList.appendChild(li);
+        });
+      } else {
+        console.error("Failed to load tasks", data);
+      }
+    });
+
+  
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const title = document.getElementById("taskTitle").value.trim();
+    const sessions = parseInt(document.getElementById("sessionEstimate").value);
+    const workMin = parseInt(document.getElementById("customWorkTime").value);
+    const priority = document.getElementById("taskPriority").value;
+
+    if (!title || !sessions || !workMin || !priority) {
+      alert("Please fill all fields");
+      return;
+    }
+
+    fetch("tasks.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, sessions, workMin, priority })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        const li = document.createElement("li");
+        li.textContent = `${title} (${sessions} sessions, ${workMin} min, ${priority})`;
+        taskList.appendChild(li);
+        form.reset();
+      } else {
+        alert("Error adding task: " + (data.message || "Unknown error"));
+      }
+    })
+    .catch(err => {
+      console.error("Error:", err);
+      alert("Failed to add task");
+    });
+  });
+});
+</script>
+
+
+
+
+</body>
+</html>
