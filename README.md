@@ -107,7 +107,14 @@ User-defined long-term goals.
 | `Status`      | enum        | Active, Achieved, Failed |
 | `Created_Date`| datetime    | Default: now       |
 | `Achieved_date`| datetime   | Nullable           |
+Sure! Here’s a concise and professional paragraph you can include in your README to explain how this project relates to your **Database Systems (DBS) course**:
 
 ---
+
+### 🎓 About This Project
+
+This project was developed as part of a **Database Systems course** to demonstrate practical application of relational database design, normalization principles (up to 3NF), and integration with a full-stack web application. It focuses on building a real-world system that involves **user data management**, **task tracking**, **session logging**, and **custom settings**, all powered by a **MySQL backend**. The goal was to not only design an efficient and normalized database schema, but also to implement it in a meaningful and functional way that supports dynamic user interactions.
+
+
 
 
